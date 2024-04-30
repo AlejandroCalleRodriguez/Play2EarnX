@@ -17,13 +17,13 @@ const generateGameData = (count) => {
         length: { min: 42, max: 42 },
         prefix: '0x',
       }),
-      participants: 2,
-      winners: 1,
-      acceptees: faker.number.int({ min: 1, max: 2 }),
+      participants: faker.number.int({ min: 20, max: 40 }),
+      numberOfWinners: faker.number.int({ min: 1, max: 10 }),
+      acceptees: faker.number.int({ min: 1, max: 10 }),
       stake: faker.number.float({ min: 0.01, max: 0.1 }),
-      starts: faker.date.past().getTime(),
-      ends: faker.date.future().getTime(),
-      timestamp: faker.date.past().getTime(),
+      startDate: faker.date.past().getTime(),
+      endDate: faker.date.future().getTime(),
+      timestamp: Date.now(),
       deleted: faker.datatype.boolean(),
       paidOut: faker.datatype.boolean(),
     }
@@ -40,7 +40,7 @@ const generateInvitations = async (count) => {
   for (let i = 0; i < count; i++) {
     const game = {
       gameId: i + 1,
-      account: Math.random() < 0.5 ? player1 : player2,
+      account: Math.random() < 0.5 ? player1.address : player2.address,
       stake: faker.number.float({ min: 0.01, max: 0.1 }),
       responded: faker.datatype.boolean(),
       accepted: faker.datatype.boolean(),
@@ -56,16 +56,17 @@ async function createGame(contract, game) {
     game.title,
     game.description,
     game.participants,
-    game.winners,
-    game.starts,
-    game.ends,
+    game.numberOfWinners,
+    game.startDate,
+    game.endDate,
     { value: toWei(game.stake) }
   )
+
   await tx.wait()
 }
 
 async function sendInvitation(contract, player) {
-  const tx = await contract.invitePlayer(player.account, player.gameId)
+  const tx = await contract.invitePlayer(player.gameId, player.account)
   await tx.wait()
 }
 
@@ -84,35 +85,52 @@ async function getMyInvitations(contract) {
   console.log('Invitations:', result)
 }
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 async function main() {
-  let playToEarnXContract
-
+  let contract
   try {
-    const contractAddresses = fs.readFileSync('./contracts/contractAddress.json', 'utf8')
-    const { playToEarnXContract: playToEarnXAddress } = JSON.parse(contractAddresses)
+    const contractAddress = fs.readFileSync('./contracts/contractAddress.json', 'utf8')
+    const { playToEarnXContract: playToEarnXAddress } = JSON.parse(contractAddress)
 
-    playToEarnXContract = await ethers.getContractAt('PlayToEarnX', playToEarnXAddress)
+    contract = await ethers.getContractAt('PlayToEarnX', playToEarnXAddress)
 
-    // generateGameData(dataCount).forEach(async (game) => {
-    //   await createGame(playToEarnXContract, game)
-    // })
+    // console.log(playToEarnXAddress);
 
-    // Array(dataCount)
-    //   .fill()
-    //   .forEach(async (charity, i) => {
-    //     const randomCount = faker.number.int({ min: 1, max: 4 })
-    //     const invitations = await generateInvitations(randomCount)
+    // Process #1
+    await Promise.all(
+      generateGameData(dataCount).map(async (game) => {
+        await createGame(contract, game)
+      })
+    )
 
-    //     invitations.forEach(async (player, i) => {
-    //       await sendInvitation(playToEarnXContract, player)
-    //     })
-    //   })
+    await delay(2500) // waits for 2.5 seconds
 
-    // await getGames(playToEarnXContract)
-    // await getInvitations(playToEarnXContract, 1)
-    // await getMyInvitations(playToEarnXContract)
+    // Process #2
+    await Promise.all(
+      Array(dataCount)
+        .fill()
+        .map(async (_, i) => {
+          const randomCount = faker.number.int({ min: 1, max: 2 })
+          const invitations = await generateInvitations(randomCount)
+
+          await Promise.all(
+            invitations.map(async (player) => {
+              await sendInvitation(contract, player)
+            })
+          )
+        })
+    )
+
+    await delay(2500) // waits for 2.5 seconds
+
+    // Process #3
+    await getGames(contract)
+    await getInvitations(contract, 1)
+    await getMyInvitations(contract)
   } catch (error) {
     console.error('Unhandled error:', error)
+    throw error
   }
 }
 

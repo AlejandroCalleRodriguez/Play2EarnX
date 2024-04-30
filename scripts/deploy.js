@@ -19,13 +19,7 @@ async function deployContract() {
 
 async function saveContractAddress(contract) {
   try {
-    const address = JSON.stringify(
-      {
-        playToEarnXContract: contract.target,
-      },
-      null,
-      4
-    )
+    const address = JSON.stringify({ playToEarnXContract: contract.target }, null, 4)
 
     fs.writeFile('./contracts/contractAddress.json', address, 'utf8', (error) => {
       if (error) {
@@ -50,6 +44,7 @@ async function main() {
     console.log('Contract deployment completed successfully.')
   } catch (error) {
     console.error('Unhandled error:', error)
+    throw error
   }
 }
 

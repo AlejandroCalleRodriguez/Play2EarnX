@@ -59,7 +59,7 @@ contract PlayToEarnX is Ownable, ReentrancyGuard, ERC20 {
     }
 
     uint256 private totalBalance;
-    uint256 private servicePct;
+    uint256 public servicePct;
 
     mapping(uint => bool) gameExists;
     mapping(uint256 => GameStruct) games;
@@ -114,7 +114,6 @@ contract PlayToEarnX is Ownable, ReentrancyGuard, ERC20 {
     function playerCreated (uint gameId) internal returns (bool) {
         _totalPlayers.increment();
 
-        
         PlayerStruct memory player;
         player.id = _totalPlayers.current();
         player.gameId = gameId;
@@ -135,7 +134,6 @@ contract PlayToEarnX is Ownable, ReentrancyGuard, ERC20 {
         score.gameId = gameId;
         score.player = msg.sender;
         scores[gameId].push(score);
-
         return true;
     }
 
@@ -154,7 +152,7 @@ contract PlayToEarnX is Ownable, ReentrancyGuard, ERC20 {
         games[gameId].deleted = true;
     }
 
-    function invitePlayer(address receiver, uint256 gameId) public {
+    function invitePlayer(uint256 gameId, address receiver) public {
         require(gameExists[gameId], 'Game not found');
         require(games[gameId].acceptees < games[gameId].participants, 'Out of capacity');
         require(!isListed[gameId][receiver], "Player already accepted");
@@ -333,7 +331,7 @@ contract PlayToEarnX is Ownable, ReentrancyGuard, ERC20 {
         return scores[gameId];
     }
 
-    function getMyInvitations(uint256 gameId) public view returns (InvitationStruct[] memory) {
+    function getInvitations(uint256 gameId) public view returns (InvitationStruct[] memory) {
         return invitationsOf[gameId];
     }
 
@@ -352,8 +350,9 @@ contract PlayToEarnX is Ownable, ReentrancyGuard, ERC20 {
             if(isInvited[i][msg.sender]){
                 for (uint256 j = 0; j < invitationsOf[i].length; j++) {
                     Invitations[index] = invitationsOf[i][j];
-                    Invitations[index++].id = j;
+                    Invitations[index].id = j;
                 }
+                index++;
             }
         }
     }
