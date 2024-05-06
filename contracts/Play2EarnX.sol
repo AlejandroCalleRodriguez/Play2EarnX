@@ -349,10 +349,12 @@ contract PlayToEarnX is Ownable, ReentrancyGuard, ERC20 {
         for (uint i = 1; i <= _totalGames.current(); i++) {
             if(isInvited[i][msg.sender]){
                 for (uint256 j = 0; j < invitationsOf[i].length; j++) {
+                    if (invitationsOf[i][j].receiver == msg.sender){
                     Invitations[index] = invitationsOf[i][j];
                     Invitations[index].id = j;
+                    index++;
+                    }
                 }
-                index++;
             }
         }
     }

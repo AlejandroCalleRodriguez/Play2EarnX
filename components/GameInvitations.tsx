@@ -5,6 +5,7 @@ import Identicon from 'react-identicons'
 import { toast } from 'react-toastify'
 import { useAccount } from 'wagmi'
 import Link from 'next/link'
+import { respondToInvite } from '@/services/blockchain'
 
 interface ComponentProps {
   game?: GameStruct
@@ -15,13 +16,18 @@ interface ComponentProps {
 const GameInvitations: React.FC<ComponentProps> = ({ invitations, game, label }) => {
   const { address } = useAccount()
 
-  const handleResponse = async (accept: boolean, invitation: InvitationStruct, index: number) => {
+  const handleResponse = async (accepted: boolean, invitation: InvitationStruct, index: number) => {
     if (!address) return toast.warning('Connect wallet first!')
     index = label ? invitation.id : index
 
     await toast.promise(
-      new Promise<void>((resolve, reject) => {
-        //...
+      new Promise(async (resolve, reject) => {
+        respondToInvite(accepted, invitation, index)
+        .then((tx) => {
+          console.log(tx)
+          resolve(tx)
+        })
+        .catch((error) => reject(error))
       }),
       {
         pending: 'Approve transaction...',
